@@ -26,19 +26,21 @@ public class ClaimProgressNoteService {
         this.userRepository = userRepository;
     }
 
-    public ClaimProgressNoteDTO addNote(Long claimId, Long agentId, String note) {
+    public ClaimProgressNoteDTO addNote(Long claimId, Long userId, String note) {
         Claim claim = claimRepository.findById(claimId)
                 .orElseThrow(() -> new RuntimeException("Claim not found"));
 
         ClaimProgressNote cn = new ClaimProgressNote();
         cn.setClaim(claim);
-        if (agentId != null) {
-            User agent = userRepository.findById(agentId)
+
+        if (userId != null) {
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            cn.setAgent(agent);
+            cn.setAgent(user);
         } else {
             cn.setAgent(null);
         }
+
         cn.setNote(note);
 
         ClaimProgressNote saved = noteRepository.save(cn);
@@ -53,8 +55,8 @@ public class ClaimProgressNoteService {
         return dto;
     }
 
-    public List<ClaimProgressNoteDTO> getNotesByClaim(Long claimId) {
-        // ✅ Correct repository method
+    // ✅ Corrected method name
+    public List<ClaimProgressNoteDTO> getNotesByClaimId(Long claimId) {
         List<ClaimProgressNote> notes = noteRepository.findByClaim_Id(claimId);
 
         return notes.stream().map(note -> {

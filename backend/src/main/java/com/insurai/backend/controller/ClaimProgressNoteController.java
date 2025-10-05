@@ -69,7 +69,7 @@ public class ClaimProgressNoteController {
             }
         }
 
-        List<ClaimProgressNoteDTO> notes = noteService.getNotesByClaim(claimId);
+        List<ClaimProgressNoteDTO> notes = noteService.getNotesByClaimId(claimId);
         logger.info("Found {} notes for claim ID {}", notes.size(), claimId);
         return ResponseEntity.ok(notes);
     }

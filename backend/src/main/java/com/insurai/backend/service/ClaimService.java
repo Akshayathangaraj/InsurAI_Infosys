@@ -9,6 +9,8 @@ import com.insurai.backend.repository.EmployeeRepository;
 import com.insurai.backend.repository.PolicyRepository;
 import com.insurai.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import com.insurai.backend.dto.ClaimProgressNoteDTO;
+
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -222,30 +224,48 @@ public class ClaimService {
     }
 
     // ---------------- Helper: Mapping ----------------
-    private ClaimResponse mapToResponse(Claim claim) {
-        return new ClaimResponse(
-                claim.getId(),
-                claim.getEmployee() != null ? claim.getEmployee().getId() : null,
-                claim.getEmployee() != null && claim.getEmployee().getUser() != null
-                        ? claim.getEmployee().getUser().getUsername()
-                        : null,
-                claim.getPolicy() != null ? claim.getPolicy().getId() : null,
-                claim.getPolicy() != null ? claim.getPolicy().getPolicyName() : null,
-                claim.getDescription(),
-                claim.getAmount(),
-                claim.getStatus() != null ? claim.getStatus().name() : null,
-                claim.getDocumentPath(),
-                claim.getClaimDate(),
-                claim.getAssignedAgent() != null ? claim.getAssignedAgent().getId() : null,
-                claim.getAssignedAgent() != null ? claim.getAssignedAgent().getUsername() : null,
-                claim.getDecisionDate(),
-                claim.getSettlementAmount(),
-                claim.getResolutionNotes(),
-                null,
-                null
-        );
-    }
+    // ---------------- Helper: Mapping ----------------
+private ClaimResponse mapToResponse(Claim claim) {
+    // Fetch all progress notes (DTOs) for this claim
+    List<ClaimProgressNoteDTO> allNoteDTOs = noteService.getNotesByClaimId(claim.getId());
 
+    // Agent suggestions are notes that start with "Agent suggestion:"
+    List<String> agentSuggestions = allNoteDTOs.stream()
+        .map(ClaimProgressNoteDTO::getNote)
+        .filter(note -> note.startsWith("Agent suggestion:"))
+        .toList();
+
+    // Build response including notes and documentPaths
+    ClaimResponse resp = new ClaimResponse(
+        claim.getId(),
+        claim.getEmployee() != null ? claim.getEmployee().getId() : null,
+        claim.getEmployee() != null && claim.getEmployee().getUser() != null
+            ? claim.getEmployee().getUser().getUsername()
+            : null,
+        claim.getPolicy() != null ? claim.getPolicy().getId() : null,
+        claim.getPolicy() != null ? claim.getPolicy().getPolicyName() : null,
+        claim.getDescription(),
+        claim.getAmount(),
+        claim.getStatus() != null ? claim.getStatus().name() : null,
+        claim.getDocumentPath(),
+        claim.getClaimDate(),
+        claim.getAssignedAgent() != null ? claim.getAssignedAgent().getId() : null,
+        claim.getAssignedAgent() != null ? claim.getAssignedAgent().getUsername() : null,
+        claim.getDecisionDate(),
+        claim.getSettlementAmount(),
+        claim.getResolutionNotes(),
+        null, // old agentNotes (now unused, see below)
+        agentSuggestions
+    );
+
+    // Attach the full notes DTO list (used by frontend for proper rendering)
+    resp.setNotes(allNoteDTOs);
+
+    // Also, add document paths if you have a setter:
+    resp.setDocumentPaths(claim.getDocumentPaths());
+
+    return resp;
+}
     public ClaimResponse toResponse(Claim claim) {
         return mapToResponse(claim);
     }

@@ -13,37 +13,39 @@ public class ClaimResponse {
     private String description;
     private Double amount;
     private String status;
-    private String documentPath;
+    private String documentPath;                 // Single file (compatibility)
+    private List<String> documentPaths;          // Multiple files (new)
     private LocalDateTime claimDate;
     private Long assignedAgentId;
     private String assignedAgentName;
     private LocalDateTime decisionDate;
     private Double settlementAmount;
     private String resolutionNotes;
-    private String agentSuggestion;
-    private String agentNotes;
-
-    private List<ClaimProgressNoteDTO> notes;
+    private List<String> agentNotes;             // Legacy - can set to null
+    private List<String> agentSuggestions;       // Suggestions by agent
+    private List<ClaimProgressNoteDTO> notes;    // Full progress notes
 
     public ClaimResponse() {}
 
-    public ClaimResponse(Long id,
-                         Long employeeId,
-                         String employeeName,
-                         Long policyId,
-                         String policyName,
-                         String description,
-                         Double amount,
-                         String status,
-                         String documentPath,
-                         LocalDateTime claimDate,
-                         Long assignedAgentId,
-                         String assignedAgentName,
-                         LocalDateTime decisionDate,
-                         Double settlementAmount,
-                         String resolutionNotes,
-                         String agentSuggestion,
-                         String agentNotes) {
+    public ClaimResponse(
+            Long id,
+            Long employeeId,
+            String employeeName,
+            Long policyId,
+            String policyName,
+            String description,
+            Double amount,
+            String status,
+            String documentPath,
+            LocalDateTime claimDate,
+            Long assignedAgentId,
+            String assignedAgentName,
+            LocalDateTime decisionDate,
+            Double settlementAmount,
+            String resolutionNotes,
+            List<String> agentNotes,
+            List<String> agentSuggestions
+    ) {
         this.id = id;
         this.employeeId = employeeId;
         this.employeeName = employeeName;
@@ -59,11 +61,12 @@ public class ClaimResponse {
         this.decisionDate = decisionDate;
         this.settlementAmount = settlementAmount;
         this.resolutionNotes = resolutionNotes;
-        this.agentSuggestion = agentSuggestion;
         this.agentNotes = agentNotes;
+        this.agentSuggestions = agentSuggestions;
     }
 
-    // Getters and Setters
+    // ---------- Getters and Setters ----------
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -91,6 +94,9 @@ public class ClaimResponse {
     public String getDocumentPath() { return documentPath; }
     public void setDocumentPath(String documentPath) { this.documentPath = documentPath; }
 
+    public List<String> getDocumentPaths() { return documentPaths; }
+    public void setDocumentPaths(List<String> documentPaths) { this.documentPaths = documentPaths; }
+
     public LocalDateTime getClaimDate() { return claimDate; }
     public void setClaimDate(LocalDateTime claimDate) { this.claimDate = claimDate; }
 
@@ -109,11 +115,11 @@ public class ClaimResponse {
     public String getResolutionNotes() { return resolutionNotes; }
     public void setResolutionNotes(String resolutionNotes) { this.resolutionNotes = resolutionNotes; }
 
-    // public String getAgentSuggestion() { return agentSuggestion; }
-    // public void setAgentSuggestion(String agentSuggestion) { this.agentSuggestion = agentSuggestion; }
+    public List<String> getAgentNotes() { return agentNotes; }
+    public void setAgentNotes(List<String> agentNotes) { this.agentNotes = agentNotes; }
 
-    // public String getAgentNotes() { return agentNotes; }
-    // public void setAgentNotes(String agentNotes) { this.agentNotes = agentNotes; }
+    public List<String> getAgentSuggestions() { return agentSuggestions; }
+    public void setAgentSuggestions(List<String> agentSuggestions) { this.agentSuggestions = agentSuggestions; }
 
     public List<ClaimProgressNoteDTO> getNotes() { return notes; }
     public void setNotes(List<ClaimProgressNoteDTO> notes) { this.notes = notes; }

@@ -15,17 +15,27 @@ const Login = () => {
 
     try {
       const response = await login(username, password);
+      console.log("Login response:", response.data);
 
-      // Save token and basic info
+      // Save auth/token and info
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("username", response.data.username);
       localStorage.setItem("role", response.data.role);
 
-      // Save employeeId if role is EMPLOYEE
+      // Always save userId (mandatory for all roles)
+      if (response.data.userId) {
+        localStorage.setItem("userId", response.data.userId);
+      } else {
+        // Defensive guard
+        alert("Login response did not include userId. Contact admin.");
+        return;
+      }
+
+      // Save employeeId for employees (for claim operations)
       if (response.data.role === "EMPLOYEE" && response.data.employeeId) {
         localStorage.setItem("employeeId", response.data.employeeId);
-      } else if (response.data.userId) {
-        localStorage.setItem("userId", response.data.userId);
+      } else {
+        localStorage.removeItem("employeeId");
       }
 
       // Redirect based on role

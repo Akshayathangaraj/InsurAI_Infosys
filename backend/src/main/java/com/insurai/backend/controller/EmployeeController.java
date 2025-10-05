@@ -76,7 +76,7 @@ public class EmployeeController {
     // Get employee by username for frontend
     @GetMapping("/by-username/{username}")
     public ResponseEntity<Employee> getEmployeeByUsername(@PathVariable String username) {
-        return employeeRepository.findByUser_Username(username)
+        return employeeRepository.findByUser_username(username)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

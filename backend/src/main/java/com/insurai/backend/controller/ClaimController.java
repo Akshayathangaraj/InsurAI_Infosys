@@ -7,6 +7,9 @@ import com.insurai.backend.entity.User;
 import com.insurai.backend.service.ClaimService;
 import com.insurai.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,10 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Principal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/claims")
@@ -39,26 +39,39 @@ public class ClaimController {
     // ---------------- Employee submits a new claim ----------------
     @PostMapping("/submit")
     public ResponseEntity<ClaimResponse> submitClaim(
-            @RequestParam Long employeeId,
-            @RequestParam Long policyId,
-            @RequestParam Double amount,
-            @RequestParam String description,
-            @RequestParam(required = false) MultipartFile document
+        @RequestParam Long employeeId,
+        @RequestParam Long policyId,
+        @RequestParam Double amount,
+        @RequestParam String description,
+        @RequestParam(value = "documents", required = false) MultipartFile[] documents
     ) throws IOException {
 
+        List<String> documentPaths = new ArrayList<>();
         String documentPath = null;
-        if (document != null && !document.isEmpty()) {
-            String extension = document.getOriginalFilename() != null ?
-                    document.getOriginalFilename().substring(document.getOriginalFilename().lastIndexOf(".")) : "";
-            String fileName = UUID.randomUUID() + extension;
-            Path dirPath = Paths.get(uploadDir);
-            File uploadFolder = dirPath.toFile();
-            if (!uploadFolder.exists() && !uploadFolder.mkdirs()) {
-                throw new IOException("Could not create upload directory: " + dirPath.toAbsolutePath());
+
+        if (documents != null && documents.length > 0) {
+            for (MultipartFile file : documents) {
+                if (file != null && !file.isEmpty()) {
+                    String extension = file.getOriginalFilename() != null ?
+                        file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")) : "";
+                    String fileName = UUID.randomUUID() + extension;
+                    Path dirPath = Paths.get(uploadDir);
+                    File uploadFolder = dirPath.toFile();
+                    if (!uploadFolder.exists() && !uploadFolder.mkdirs()) {
+                        throw new IOException("Could not create upload directory: " + dirPath.toAbsolutePath());
+                    }
+                    Path filePath = dirPath.resolve(fileName);
+                    file.transferTo(filePath.toFile());
+
+                    // ---- KEY FIX: only store relative path, not abspath ----
+                    String relativePath = "uploads/claims/" + fileName;
+                    documentPaths.add(relativePath); // <---
+                }
             }
-            Path filePath = dirPath.resolve(fileName);
-            document.transferTo(filePath.toFile());
-            documentPath = filePath.toAbsolutePath().toString();
+            // For backward compatibility, set the first file's path
+            if (!documentPaths.isEmpty()) {
+                documentPath = documentPaths.get(0);
+            }
         }
 
         ClaimRequest request = new ClaimRequest();
@@ -68,7 +81,8 @@ public class ClaimController {
         request.setDescription(description);
         request.setDocumentPath(documentPath);
 
-        return ResponseEntity.ok(claimService.submitClaim(request));
+        // Pass all relative file paths to the service
+        return ResponseEntity.ok(claimService.submitClaimWithMultipleFiles(request, documentPaths));
     }
 
     // ---------------- Fetch all claims (Admin/Agent) ----------------
@@ -92,8 +106,8 @@ public class ClaimController {
     // ---------------- Assign agent to claim (Admin only) ----------------
     @PutMapping("/{claimId}/assign-agent/{agentId}")
     public ResponseEntity<ClaimResponse> assignAgent(
-            @PathVariable Long claimId,
-            @PathVariable Long agentId
+        @PathVariable Long claimId,
+        @PathVariable Long agentId
     ) {
         Optional<ClaimResponse> response = claimService.assignAgent(claimId, agentId);
         return response.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
@@ -102,9 +116,9 @@ public class ClaimController {
     // ---------------- Update claim status (Admin only) ----------------
     @PutMapping("/{claimId}/status")
     public ResponseEntity<ClaimResponse> updateClaimStatus(
-            @PathVariable Long claimId,
-            @RequestParam String status,
-            @RequestParam Long adminId
+        @PathVariable Long claimId,
+        @RequestParam String status,
+        @RequestParam Long adminId
     ) {
         return ResponseEntity.ok(claimService.updateClaimStatus(claimId, status, adminId));
     }
@@ -112,10 +126,10 @@ public class ClaimController {
     // ---------------- Settle claim (Admin only) ----------------
     @PutMapping("/{claimId}/settle")
     public ResponseEntity<ClaimResponse> settleClaim(
-            @PathVariable Long claimId,
-            @RequestParam Double settlementAmount,
-            @RequestParam(required = false) Long processedById,
-            @RequestParam(required = false) String resolutionNotes
+        @PathVariable Long claimId,
+        @RequestParam Double settlementAmount,
+        @RequestParam(required = false) Long processedById,
+        @RequestParam(required = false) String resolutionNotes
     ) {
         Long adminId = processedById != null ? processedById : null;
         return ResponseEntity.ok(claimService.settleClaim(claimId, settlementAmount, adminId, resolutionNotes));
@@ -124,10 +138,10 @@ public class ClaimController {
     // ---------------- Agent submits a suggestion ----------------
     @PutMapping("/{claimId}/agent-suggestion")
     public ResponseEntity<ClaimResponse> submitAgentSuggestion(
-            @PathVariable Long claimId,
-            @RequestParam Long agentId,
-            @RequestParam String suggestion,
-            @RequestParam(required = false) String notes
+        @PathVariable Long claimId,
+        @RequestParam Long agentId,
+        @RequestParam String suggestion,
+        @RequestParam(required = false) String notes
     ) {
         return ResponseEntity.ok(claimService.submitAgentSuggestion(claimId, agentId, suggestion, notes));
     }
@@ -135,14 +149,13 @@ public class ClaimController {
     // ---------------- Employee adds additional files to claim ----------------
     @PostMapping("/{claimId}/add-files")
     public ResponseEntity<String> addFilesToClaim(
-            @PathVariable Long claimId,
-            @RequestParam("documents") MultipartFile[] documents,
-            Principal principal
+        @PathVariable Long claimId,
+        @RequestParam("documents") MultipartFile[] documents,
+        @RequestParam("userId") Long userId
     ) {
         try {
-            String username = principal.getName();
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
             Claim claim = claimService.getClaimById(claimId);
 
@@ -153,7 +166,7 @@ public class ClaimController {
             for (MultipartFile file : documents) {
                 if (file != null && !file.isEmpty()) {
                     String extension = file.getOriginalFilename() != null ?
-                            file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")) : "";
+                        file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")) : "";
                     String fileName = UUID.randomUUID() + extension;
 
                     Path dirPath = Paths.get(uploadDir);
@@ -161,18 +174,38 @@ public class ClaimController {
                     if (!uploadFolder.exists() && !uploadFolder.mkdirs()) {
                         throw new IOException("Could not create upload directory: " + dirPath.toAbsolutePath());
                     }
-
                     Path filePath = dirPath.resolve(fileName);
                     file.transferTo(filePath.toFile());
 
-                    claimService.addFileToClaim(claimId, filePath.toAbsolutePath().toString());
+                    // Key Fix: store relative path, not abspath
+                    String relativePath = "uploads/claims/" + fileName;
+                    claimService.addFileToClaim(claimId, relativePath); // <---
                 }
             }
-
             return ResponseEntity.ok("Files added successfully");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Failed to add files: " + e.getMessage());
+        }
+    }
+
+    // ---------------- Provide public endpoint for viewing documents by filename ----------------
+    @GetMapping("/view-document/{filename:.+}")
+    public ResponseEntity<Resource> viewDocument(@PathVariable String filename) {
+        try {
+            Path file = Paths.get(uploadDir, filename).normalize();
+            Resource resource = new UrlResource(file.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            // TODO: set appropriate mime type if needed
+            return ResponseEntity
+                .ok()
+                .header("Content-Disposition", "inline; filename=\"" + resource.getFilename() + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
         }
     }
 

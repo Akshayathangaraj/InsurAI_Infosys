@@ -15,6 +15,8 @@ const UserDashboard = () => {
 
   const API_BASE = "http://localhost:8080/api";
   const username = localStorage.getItem("username");
+  const employeeId = localStorage.getItem("employeeId");
+// Use userId for API calls, appending it to FormData or as request params
 
   const fetchData = async () => {
     try {

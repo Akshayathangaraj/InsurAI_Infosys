@@ -67,7 +67,7 @@ public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
     return ResponseEntity.ok("User registered successfully!");
 }
 
-   @PostMapping("/login")
+  @PostMapping("/login")
 public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
     User user = userRepository.findByUsername(request.getUsername()).orElse(null);
 
@@ -81,17 +81,17 @@ public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
     response.put("token", token);
     response.put("username", user.getUsername());
     response.put("role", user.getRole());
+    response.put("userId", user.getId()); // <-- ALWAYS set userId for all users!
 
-    // ✅ If the role is EMPLOYEE, fetch the employeeId
+    // If the role is EMPLOYEE, fetch the employeeId
     if (user.getRole() == Role.EMPLOYEE) {
-        Employee employee = employeeRepository.findByUser_Username(user.getUsername())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepository.findByUser_username(user.getUsername())
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
         response.put("employeeId", employee.getId());
-    } else {
-        response.put("userId", user.getId());
     }
 
     return ResponseEntity.ok(response);
 }
+
 
 }

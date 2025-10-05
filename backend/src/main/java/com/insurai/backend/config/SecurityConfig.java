@@ -47,6 +47,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
 
+                // --- ALLOW DOCUMENT VIEWER ENDPOINT ---
+                .requestMatchers(HttpMethod.GET, "/api/claims/view-document/**").permitAll()
+
                 // Policies
                 .requestMatchers(HttpMethod.GET, "/api/policies/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
                 .requestMatchers(HttpMethod.POST, "/api/policies/**").hasRole("ADMIN")
@@ -60,11 +63,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
                 .requestMatchers(HttpMethod.DELETE, "/api/claims/**").hasRole("ADMIN")
 
-                // Claim notes (employees now allowed)
+                // Claim notes
                 .requestMatchers("/api/claim-notes/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
 
                 // Appointments
                 .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+                .requestMatchers("/api/employees/by-username/**").permitAll()
 
                 // Employees
                 .requestMatchers("/api/employees/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")

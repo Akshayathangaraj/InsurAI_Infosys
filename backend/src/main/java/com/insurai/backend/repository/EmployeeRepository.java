@@ -6,6 +6,6 @@ import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     // Fetch employee by linked user's username
-    Optional<Employee> findByUser_Username(String username);
+    Optional<Employee> findByUser_username(String username);
     Optional<Employee> findByUserId(Long userId);
 }

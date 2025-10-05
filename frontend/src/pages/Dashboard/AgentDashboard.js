@@ -39,30 +39,29 @@ const AgentDashboard = () => {
   };
 
   const handleAddNote = async () => {
-  if (!progressNote.trim()) return alert("Note cannot be empty");
+    if (!progressNote.trim()) return alert("Note cannot be empty");
 
-  try {
-    const res = await axios.post(
-      `${API_BASE}/claim-notes/add`,
-      {
-        claimId: noteModal.claimId,
-        agentId: userId,
-        note: progressNote,
-      },
-      { headers: authHeader() }
-    );
-    if (res.status === 200 || res.status === 201) {  // Only close on success
-      setNoteModal({ show: false, claimId: null });
-      fetchAssignedClaims();
-    } else {
-      alert("Failed to add note. Backend returned error.");
+    try {
+      const res = await axios.post(
+        `${API_BASE}/claim-notes/add`,
+        {
+          claimId: noteModal.claimId,
+          agentId: userId,
+          note: progressNote,
+        },
+        { headers: authHeader() }
+      );
+      if (res.status === 200 || res.status === 201) {
+        setNoteModal({ show: false, claimId: null });
+        fetchAssignedClaims();
+      } else {
+        alert("Failed to add note. Backend returned error.");
+      }
+    } catch (err) {
+      console.error("Error adding progress note:", err);
+      alert("Failed to add note. Try again.");
     }
-  } catch (err) {
-    console.error("Error adding progress note:", err);
-    alert("Failed to add note. Try again.");
-  }
-};
-
+  };
 
   return (
     <div>
@@ -84,56 +83,80 @@ const AgentDashboard = () => {
             </tr>
           </thead>
           <tbody>
-  {assignedClaims.length === 0 ? (
-    <tr>
-      <td colSpan="7" style={{ textAlign: "center" }}>No assigned claims</td>
-    </tr>
-  ) : (
-    assignedClaims.map((c) => (
-      <React.Fragment key={c.id}>
-        <tr>
-          <td>{c.id}</td>
-          <td>{c.employeeName || "N/A"}</td>
-          <td>{c.policyName || `Policy #${c.policyId}`}</td>
-          <td>{c.description}</td>
-          <td>{c.status}</td>
-          <td>
-            {c.documentPath ? (
-              <a
-                href={c.documentPath.startsWith("http") ? c.documentPath : `http://${c.documentPath}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View
-              </a>
-            ) : "N/A"}
-          </td>
-          <td>
-            <button onClick={() => openNoteModal(c.id)}>Add Note</button>
-          </td>
-        </tr>
-        {/* ✅ Show Notes */}
-        <tr>
-          <td colSpan="7">
-            <strong>Progress Notes:</strong>
-            <ul>
-              {c.notes && c.notes.length > 0 ? (
-                c.notes.map((n) => (
-                  <li key={n.id}>
-                    {n.note} <em>({new Date(n.createdAt).toLocaleString()})</em>
-                  </li>
-                ))
-              ) : (
-                <li>No notes yet</li>
-              )}
-            </ul>
-          </td>
-        </tr>
-      </React.Fragment>
-    ))
-  )}
-</tbody>
-
+            {assignedClaims.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: "center" }}>
+                  No assigned claims
+                </td>
+              </tr>
+            ) : (
+              assignedClaims.map((c) => (
+                <React.Fragment key={c.id}>
+                  <tr>
+                    <td>{c.id}</td>
+                    <td>{c.employeeName || "N/A"}</td>
+                    <td>{c.policyName || `Policy #${c.policyId}`}</td>
+                    <td>{c.description}</td>
+                    <td>{c.status}</td>
+                    <td>
+                      {/* Document viewer links */}
+                      {c.documentPaths && c.documentPaths.length > 0
+                        ? c.documentPaths.map((path, idx) => {
+                            // Extract filename from relative path (uploads/claims/filename.pdf)
+                            const filename = path.split("/").pop();
+                            return (
+                              <a
+                                key={idx}
+                                href={`http://localhost:8080/api/claims/view-document/${filename}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ marginRight: "8px" }}
+                              >
+                                View {idx + 1}
+                              </a>
+                            );
+                          })
+                        : c.documentPath
+                        ? (() => {
+                            const filename = c.documentPath.split("/").pop();
+                            return (
+                              <a
+                                href={`http://localhost:8080/api/claims/view-document/${filename}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View
+                              </a>
+                            );
+                          })()
+                        : "N/A"}
+                    </td>
+                    <td>
+                      <button onClick={() => openNoteModal(c.id)}>Add Note</button>
+                    </td>
+                  </tr>
+                  {/* Notes Row */}
+                  <tr>
+                    <td colSpan="7">
+                      <strong>Progress Notes:</strong>
+                      <ul>
+                        {c.notes && c.notes.length > 0 ? (
+                          c.notes.map((n) => (
+                            <li key={n.id}>
+                              {n.note}{" "}
+                              <em>({new Date(n.createdAt).toLocaleString()})</em>
+                            </li>
+                          ))
+                        ) : (
+                          <li>No notes yet</li>
+                        )}
+                      </ul>
+                    </td>
+                  </tr>
+                </React.Fragment>
+              ))
+            )}
+          </tbody>
         </table>
 
         {noteModal.show && (
@@ -146,7 +169,10 @@ const AgentDashboard = () => {
             />
             <div style={{ marginTop: "10px" }}>
               <button onClick={handleAddNote}>Submit Note</button>
-              <button onClick={() => setNoteModal({ show: false, claimId: null })} style={{ marginLeft: "10px" }}>
+              <button
+                onClick={() => setNoteModal({ show: false, claimId: null })}
+                style={{ marginLeft: "10px" }}
+              >
                 Cancel
               </button>
             </div>

@@ -4,6 +4,8 @@ import Navbar from "../../components/Navbar";
 import { authHeader } from "../../utils/authHeader";
 import styles from "./Dashboard.module.css";
 
+const API_BASE = "http://localhost:8080/api";
+
 const EmployeeClaims = () => {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,26 +16,17 @@ const EmployeeClaims = () => {
   const [uploadingClaimId, setUploadingClaimId] = useState(null);
   const [additionalFiles, setAdditionalFiles] = useState({}); // { claimId: File[] }
 
-  const API_BASE = "http://localhost:8080/api";
+  // Always fetch both ids from localStorage
   const username = localStorage.getItem("username");
-
-  const fetchEmployeeId = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/employees/by-username/${username}`, {
-        headers: authHeader(),
-      });
-      return res.data.id;
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load employee info.");
-      return null;
-    }
-  };
+  const employeeId = localStorage.getItem("employeeId"); // FOR CLAIMS
+  const userId = localStorage.getItem("userId");         // FOR AUTH/FILE UPLOAD
 
   const fetchClaims = async () => {
-    const employeeId = await fetchEmployeeId();
-    if (!employeeId) return;
-
+    if (!employeeId) {
+      setError("Employee ID missing. Please login again.");
+      setLoading(false);
+      return;
+    }
     try {
       const res = await axios.get(`${API_BASE}/claims/employee/${employeeId}`, {
         headers: authHeader(),
@@ -70,15 +63,16 @@ const EmployeeClaims = () => {
   // Submit new claim
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const employeeId = await fetchEmployeeId();
-    if (!employeeId) return;
-
+    if (!employeeId) {
+      alert("Employee ID missing. Please login again.");
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append("description", newClaim.description);
       formData.append("amount", newClaim.amount);
       formData.append("policyId", newClaim.policyId);
-      formData.append("employeeId", employeeId);
+      formData.append("employeeId", employeeId);        // correct: submit with employeeId
       files.forEach((file) => formData.append("documents", file));
 
       await axios.post(`${API_BASE}/claims/submit`, formData, {
@@ -100,9 +94,15 @@ const EmployeeClaims = () => {
     e.preventDefault();
     if (!additionalFiles[claimId] || additionalFiles[claimId].length === 0) return;
 
+    if (!userId || userId === "null") {
+      alert("User ID missing from your session. Please log out and log in again!");
+      return;
+    }
+
     try {
       const formData = new FormData();
       additionalFiles[claimId].forEach((file) => formData.append("documents", file));
+      formData.append("userId", userId);     // correct: must be user table PK
 
       await axios.post(`${API_BASE}/claims/${claimId}/add-files`, formData, {
         headers: { ...authHeader(), "Content-Type": "multipart/form-data" },
@@ -190,6 +190,30 @@ const EmployeeClaims = () => {
                   <p><b>Policy:</b> {claim.policyName || "N/A"}</p>
                   <p><b>Submitted On:</b> {new Date(claim.claimDate).toLocaleString()}</p>
                   <p><b>Assigned Agent:</b> {claim.assignedAgentName || "Not assigned"}</p>
+                  <p><b>Document(s):</b>
+                    {claim.documentPaths && claim.documentPaths.length > 0 ? (
+                      claim.documentPaths.map((path, idx) => (
+                        <a
+                          key={idx}
+                          href={path.startsWith("http") ? path : `http://${path}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ marginLeft: "8px" }}
+                        >
+                          File {idx + 1}
+                        </a>
+                      ))
+                    ) : claim.documentPath ? (
+                      <a
+                        href={claim.documentPath.startsWith("http") ? claim.documentPath : `http://${claim.documentPath}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ marginLeft: "8px" }}
+                      >
+                        File
+                      </a>
+                    ) : " N/A"}
+                  </p>
 
                   {claim.status === "SETTLED" && (
                     <>

@@ -269,4 +269,33 @@ private ClaimResponse mapToResponse(Claim claim) {
     public ClaimResponse toResponse(Claim claim) {
         return mapToResponse(claim);
     }
+
+    public ClaimResponse submitClaimWithMultipleFiles(ClaimRequest request, List<String> documentPaths) {
+    Employee employee = employeeRepository.findById(request.getEmployeeId())
+            .orElseThrow(() -> new ClaimValidationException("Employee not found"));
+
+    Policy policy = policyRepository.findById(request.getPolicyId())
+            .orElseThrow(() -> new ClaimValidationException("Policy not found"));
+
+    if (request.getAmount() <= 0)
+        throw new ClaimValidationException("Claim amount must be greater than 0");
+
+    Claim claim = new Claim();
+    claim.setEmployee(employee);
+    claim.setPolicy(policy);
+    claim.setDescription(request.getDescription());
+    claim.setAmount(request.getAmount());
+    claim.setDocumentPath(request.getDocumentPath()); // first file for legacy
+    claim.setClaimDate(LocalDateTime.now());
+    claim.setStatus(ClaimStatus.PENDING);
+
+    // IMPORTANT: store all file paths in documentPaths
+    claim.setDocumentPaths(documentPaths != null ? documentPaths : new ArrayList<>());
+
+    Claim savedClaim = claimRepository.save(claim);
+    noteService.addNote(savedClaim.getId(), null, "Claim submitted by employee.");
+
+    return mapToResponse(savedClaim);
+}
+
 }

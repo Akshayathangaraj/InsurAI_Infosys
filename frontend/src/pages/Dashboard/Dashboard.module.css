@@ -1,0 +1,474 @@
+/* Container for the whole dashboard */
+.dashboardContainer {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+/* Page title */
+.pageTitle {
+  text-align: center;
+  color: #1976d2;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+/* Form card for submitting new claims */
+.cardForm {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 40px;
+  transition: 0.3s;
+}
+
+.cardForm:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.formTitle {
+  font-size: 1.5rem;
+  color: #1976d2;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.cardForm input,
+.cardForm select {
+  width: 100%;
+  padding: 12px 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: 0.3s;
+}
+
+.cardForm input:focus,
+.cardForm select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 5px rgba(25, 118, 210, 0.3);
+}
+
+.cardForm input[type="file"] {
+  padding: 5px;
+}
+
+.btnPrimary {
+  width: 100%;
+  padding: 12px;
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: 0.3s;
+}
+
+.btnPrimary:hover {
+  background-color: #115293;
+}
+
+/* Claims grid */
+.claimsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Individual claim card */
+.claimCard {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 500px; /* ✅ Fixed height for all claim cards */
+  overflow: hidden;
+}
+
+.claimCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.claimHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.status {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* Status colors */
+.pending { background-color: #ff9800; }
+.approved { background-color: #4caf50; }
+.rejected { background-color: #f44336; }
+.settled { background-color: #1976d2; }
+
+.claimBody {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 5px; /* avoid scrollbar overlap */
+}
+
+/* Notes section */
+.notesSection {
+  background: #f9f9f9;
+  padding: 12px 15px;
+  border-radius: 10px;
+  margin-top: 10px;
+  max-height: 180px; /* limit note section height */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #1976d2 #f1f1f1;
+}
+
+/* Optional: better-looking scrollbar for webkit browsers */
+.notesSection::-webkit-scrollbar {
+  width: 6px;
+}
+.notesSection::-webkit-scrollbar-thumb {
+  background: #1976d2;
+  border-radius: 10px;
+}
+.notesSection::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+
+.notesSection h4 {
+  font-size: 1rem;
+  color: #1976d2;
+  margin-bottom: 10px;
+}
+
+.notesList {
+  list-style: none;
+  padding: 0;
+}
+
+.noteItem {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.noteHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.noteDate {
+  color: #888;
+}
+
+/* File upload / add files section */
+.addFilesSection {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.addFilesSection input[type="file"] {
+  border: 1px dashed #1976d2;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btnSecondary {
+  padding: 8px 12px;
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: 0.3s;
+  width: fit-content;
+}
+
+.btnSecondary:hover {
+  background-color: #115293;
+}
+
+/* File badges */
+.fileBadge {
+  display: inline-block;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin: 3px 3px 0 0;
+}
+
+/* Loading / empty / error states */
+.loading,
+.error,
+.emptyState,
+.noNotes {
+  text-align: center;
+  font-size: 1rem;
+  color: #888;
+  margin: 15px 0;
+}
+/* ===========================
+   DASHBOARD MAIN LAYOUT
+   =========================== */
+.dashboardWrapper {
+  background: linear-gradient(135deg, #f8fbff, #eef3f9);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboardContainer {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 30px;
+  text-align: center;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+.dashboardTitle {
+  font-size: 2.3rem;
+  color: #004aad;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 40px;
+}
+
+/* ===========================
+   DASHBOARD CARDS SECTION
+   =========================== */
+.cardsContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  justify-content: center;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px 20px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* Different gradient backgrounds for each card */
+.cardBlue {
+  border-top: 6px solid #2196f3;
+}
+
+.cardGreen {
+  border-top: 6px solid #4caf50;
+}
+
+.cardPurple {
+  border-top: 6px solid #9c27b0;
+}
+
+.iconWrapper {
+  background: rgba(25, 118, 210, 0.08);
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon {
+  font-size: 2rem;
+  color: #1976d2;
+}
+
+.card h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.count {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1976d2;
+  margin-bottom: 15px;
+}
+
+.btn {
+  padding: 10px 20px;
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.btn:hover {
+  background-color: #125ca1;
+}
+
+/* ===========================
+   POLICY CARDS STYLING
+   =========================== */
+.policyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+.policyCard {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.policyCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.policyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.policyHeader h3 {
+  font-size: 1.2rem;
+  color: #004aad;
+  flex-grow: 1;
+  margin-left: 10px;
+}
+
+.statusTag {
+  padding: 5px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.policyBody p {
+  margin: 6px 0;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.dateRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.dateItem {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.dateIcon {
+  margin-right: 6px;
+  color: #1976d2;
+}
+
+/* Status colors */
+.pending { background-color: #ff9800; }
+.active { background-color: #4caf50; }
+.expired { background-color: #f44336; }
+.review { background-color: #9c27b0; }
+
+/* Button */
+.viewBtn {
+  margin-top: 15px;
+  background: linear-gradient(135deg, #1976d2, #0d47a1);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.viewBtn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #1565c0, #0d47a1);
+}
+
+.btnIcon {
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+/* Fade-in animation */
+.fadeIn {
+  animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

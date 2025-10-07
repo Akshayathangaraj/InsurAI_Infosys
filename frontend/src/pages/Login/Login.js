@@ -15,49 +15,26 @@ const Login = () => {
 
     try {
       const response = await login(username, password);
-      console.log("Login response:", response.data);
-
-      // Save auth/token and info
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("username", response.data.username);
       localStorage.setItem("role", response.data.role);
 
-      // Always save userId (mandatory for all roles)
-      if (response.data.userId) {
-        localStorage.setItem("userId", response.data.userId);
-      } else {
-        // Defensive guard
-        alert("Login response did not include userId. Contact admin.");
-        return;
-      }
-
-      // Save employeeId for employees (for claim operations)
+      if (response.data.userId) localStorage.setItem("userId", response.data.userId);
       if (response.data.role === "EMPLOYEE" && response.data.employeeId) {
         localStorage.setItem("employeeId", response.data.employeeId);
       } else {
         localStorage.removeItem("employeeId");
       }
 
-      // Redirect based on role
       switch (response.data.role) {
-        case "ADMIN":
-          navigate("/admin-dashboard");
-          break;
-        case "EMPLOYEE":
-          navigate("/user-dashboard");
-          break;
-        case "AGENT":
-          navigate("/agent-dashboard");
-          break;
-        default:
-          setError("Invalid role detected. Contact support.");
+        case "ADMIN": navigate("/admin-dashboard"); break;
+        case "EMPLOYEE": navigate("/user-dashboard"); break;
+        case "AGENT": navigate("/agent-dashboard"); break;
+        default: setError("Invalid role detected. Contact support.");
       }
     } catch (err) {
-      if (err.response && err.response.status === 401) {
-        setError("Invalid username or password");
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      if (err.response && err.response.status === 401) setError("Invalid username or password");
+      else setError("Something went wrong. Try again.");
     }
   };
 
@@ -88,9 +65,12 @@ const Login = () => {
           Login
         </button>
       </form>
-      <p>
-        Don't have an account? <Link to="/signup">Signup here</Link>
-      </p>
+      <div className={styles.links}>
+        <p>Don't have an account? <Link to="/signup">Signup here</Link></p>
+        <button className={styles.backBtn} onClick={() => navigate("/")}>
+          ← Back to Home
+        </button>
+      </div>
     </div>
   );
 };

@@ -1,10 +1,14 @@
 package com.insurai.backend.controller;
 
-import com.insurai.backend.dto.AppointmentDTO;
+import com.insurai.backend.dto.AppointmentRequest;
+import com.insurai.backend.dto.AppointmentResponse;
+import com.insurai.backend.dto.AppointmentSlotDTO;
+import com.insurai.backend.entity.AppointmentStatus;
 import com.insurai.backend.service.AppointmentService;
+import com.insurai.backend.service.AgentAvailabilityService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -12,29 +16,45 @@ import java.util.List;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final AgentAvailabilityService availabilityService;
 
-    public AppointmentController(AppointmentService appointmentService) {
+    public AppointmentController(AppointmentService appointmentService,
+                                 AgentAvailabilityService availabilityService) {
         this.appointmentService = appointmentService;
+        this.availabilityService = availabilityService;
     }
 
-    // ✅ Book appointment (auto-confirmed)
-    @PostMapping("/book")
-    public AppointmentDTO bookAppointment(@RequestParam Long employeeId,
-                                          @RequestParam Long agentId,
-                                          @RequestParam Long policyId,
-                                          @RequestParam String startTime) {
-        return appointmentService.bookAppointment(employeeId, agentId, policyId, LocalDateTime.parse(startTime));
+    // Schedule a new appointment
+    @PostMapping("/schedule")
+    public ResponseEntity<AppointmentResponse> scheduleAppointment(@RequestBody AppointmentRequest request) {
+        return ResponseEntity.ok(appointmentService.scheduleAppointment(request));
     }
 
-    // ✅ Get appointments by agent
+    // Get appointments by agent
     @GetMapping("/agent/{agentId}")
-    public List<AppointmentDTO> getByAgent(@PathVariable Long agentId) {
-        return appointmentService.getAppointmentsByAgent(agentId);
+    public ResponseEntity<List<AppointmentResponse>> getAgentAppointments(@PathVariable Long agentId) {
+        return ResponseEntity.ok(appointmentService.getAgentAppointments(agentId));
     }
 
-    // ✅ Get appointments by employee
+    // NEW: get next available concrete slots for an agent (next 14 days)
+    @GetMapping("/agent/{agentId}/slots")
+    public ResponseEntity<List<AppointmentSlotDTO>> getAgentSlots(@PathVariable Long agentId,
+                                                                  @RequestParam(required = false, defaultValue = "14") int daysAhead) {
+        return ResponseEntity.ok(availabilityService.getUpcomingSlots(agentId, daysAhead));
+    }
+
+    // Get appointments by employee
     @GetMapping("/employee/{employeeId}")
-    public List<AppointmentDTO> getByEmployee(@PathVariable Long employeeId) {
-        return appointmentService.getAppointmentsByEmployee(employeeId);
+    public ResponseEntity<List<AppointmentResponse>> getEmployeeAppointments(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(appointmentService.getEmployeeAppointments(employeeId));
+    }
+
+    // Update appointment status
+    @PutMapping("/{appointmentId}/status")
+    public ResponseEntity<AppointmentResponse> updateStatus(
+            @PathVariable Long appointmentId,
+            @RequestParam AppointmentStatus status
+    ) {
+        return ResponseEntity.ok(appointmentService.updateAppointmentStatus(appointmentId, status));
     }
 }

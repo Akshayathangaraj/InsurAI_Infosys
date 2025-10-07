@@ -535,3 +535,118 @@
 .cardTeal .icon { color: #2ab7ca; }
 .cardPurple { border-left: 8px solid #a05ad5; }
 .cardPurple .icon { color: #a05ad5; }
+.btnGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.btnSecondary {
+  background-color: #ffffff;
+  color: #6c63ff;
+  border: 2px solid #6c63ff;
+}
+
+.btnSecondary:hover {
+  background-color: #6c63ff;
+  color: #fff;
+}
+.dashboardContainer {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #333;
+}
+
+.slotForm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.slotForm select,
+.slotForm input[type="time"] {
+  padding: 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.offLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: bold;
+}
+
+.saveBtn {
+  padding: 8px 16px;
+  background-color: #0b79f7;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.saveBtn:hover { background-color: #0656c1; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.table th, .table td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.table th { background-color: #f4f6f8; }
+
+.editBtn {
+  background-color: #f0ad4e;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin-right: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.editBtn:hover { background-color: #ec971f; }
+
+.deleteBtn {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.deleteBtn:hover { background-color: #c9302c; }
+
+.onBtn {
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.onBtn:hover { background-color: #449d44; }
+
+.offBtn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.offRow { background-color: #f9f9f9; opacity: 0.7; }

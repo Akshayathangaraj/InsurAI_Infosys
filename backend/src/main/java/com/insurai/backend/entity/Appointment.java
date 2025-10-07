@@ -1,7 +1,9 @@
 package com.insurai.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,26 +17,23 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Employee reference
+    // Employee for whom appointment is scheduled
     @ManyToOne
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
+    @JsonIgnoreProperties({"appointments", "claims"})
     private Employee employee;
 
-    // Agent reference
+    // Agent assigned to appointment
     @ManyToOne
-    @JoinColumn(name = "agent_id", nullable = false)
+    @JoinColumn(name = "agent_id")
+    @JsonIgnoreProperties({"password","email"})
     private User agent;
 
-    // Optional: link to policy
-    @ManyToOne
-    @JoinColumn(name = "policy_id")
-    private Policy policy;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
-    // Appointment time
-    private LocalDateTime appointmentTime;
+    @Enumerated(EnumType.STRING)
+    private AppointmentStatus status; // SCHEDULED, COMPLETED, CANCELLED
 
-    // Status: PENDING, CONFIRMED, CANCELLED
-    private String status = "CONFIRMED";
-
-    // Optional: progress notes or other metadata can be linked via separate entity
+    private String notes; // Optional notes
 }

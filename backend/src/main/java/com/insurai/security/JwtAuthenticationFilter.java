@@ -58,9 +58,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             User user = userRepository.findByUsername(username).orElse(null);
 
             if (user != null && jwtUtil.validateToken(jwt, username)) {
-                // ✅ Set authorities based on user role
+                // ✅ Remove "ROLE_" prefix since grantedAuthorityDefaults is set to ""
                 SimpleGrantedAuthority authority =
-                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+                        new SimpleGrantedAuthority(user.getRole().name());
 
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(

@@ -1,12 +1,16 @@
 package com.insurai.backend.service;
 
 import com.insurai.backend.dto.AgentAvailabilityDTO;
+import com.insurai.backend.dto.AppointmentSlotDTO;
 import com.insurai.backend.entity.AgentAvailability;
 import com.insurai.backend.entity.User;
 import com.insurai.backend.repository.AgentAvailabilityRepository;
+import com.insurai.backend.repository.AppointmentRepository;
 import com.insurai.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
+
+import java.time.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,64 +19,136 @@ public class AgentAvailabilityService {
 
     private final AgentAvailabilityRepository availabilityRepo;
     private final UserRepository userRepo;
+    private final AppointmentRepository appointmentRepository;
 
-    public AgentAvailabilityService(AgentAvailabilityRepository availabilityRepo, UserRepository userRepo) {
+    public AgentAvailabilityService(AgentAvailabilityRepository availabilityRepo,
+                                    UserRepository userRepo,
+                                    AppointmentRepository appointmentRepository) {
         this.availabilityRepo = availabilityRepo;
         this.userRepo = userRepo;
+        this.appointmentRepository = appointmentRepository;
     }
 
-    public AgentAvailabilityDTO createSlot(Long agentId, LocalDateTime start, LocalDateTime end) {
-        // Validate inputs
-        if (agentId == null || start == null || end == null) {
-            throw new RuntimeException("Agent ID, start time, and end time are required");
-        }
+    // ===============================
+    // SLOT MANAGEMENT
+    // ===============================
 
-        if (start.isAfter(end) || start.equals(end)) {
-            throw new RuntimeException("Start time must be before end time");
-        }
-
-        if (start.isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Start time cannot be in the past");
-        }
-
-        User agent = userRepo.findById(agentId)
+    public AgentAvailabilityDTO saveSlot(AgentAvailabilityDTO dto) {
+        User agent = userRepo.findById(dto.getAgentId())
                 .orElseThrow(() -> new RuntimeException("Agent not found"));
 
-        // Check for overlapping slots
-        List<AgentAvailability> overlapping = availabilityRepo.findByAgentAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(agent, end, start);
-        if (!overlapping.isEmpty()) {
-            throw new RuntimeException("Slot overlaps with existing availability");
+        if (!dto.isOff() && dto.getStartTime().compareTo(dto.getEndTime()) >= 0)
+            throw new RuntimeException("Start time must be before end time");
+
+        // Check overlap only if not off
+        if (!dto.isOff()) {
+            List<AgentAvailability> overlapping = availabilityRepo
+                    .findByAgentAndDayOfWeekAndStartTimeLessThanAndEndTimeGreaterThan(
+                            agent, dto.getDayOfWeek(), dto.getEndTime(), dto.getStartTime()
+                    );
+            if (!overlapping.isEmpty())
+                throw new RuntimeException("Slot overlaps with existing slot");
         }
 
-        AgentAvailability slot = new AgentAvailability();
-        slot.setAgent(agent);
-        slot.setStartTime(start);
-        slot.setEndTime(end);
-        slot.setBooked(false);
+        AgentAvailability slot;
+        if (dto.getId() != null) {
+            slot = availabilityRepo.findById(dto.getId())
+                    .orElseThrow(() -> new RuntimeException("Slot not found"));
+        } else {
+            slot = new AgentAvailability();
+            slot.setAgent(agent);
+            slot.setBooked(false);
+        }
 
-        AgentAvailability saved = availabilityRepo.save(slot);
-        return mapToDTO(saved);
+        slot.setDayOfWeek(dto.getDayOfWeek());
+        slot.setStartTime(dto.getStartTime()); // LocalTime assignment
+        slot.setEndTime(dto.getEndTime());     // LocalTime assignment
+        slot.setOff(dto.isOff());
+
+        return mapToDTO(availabilityRepo.save(slot));
+    }
+
+    public AgentAvailabilityDTO toggleOff(Long id) {
+        AgentAvailability slot = availabilityRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Slot not found"));
+        slot.setOff(!slot.isOff());
+        return mapToDTO(availabilityRepo.save(slot));
     }
 
     public List<AgentAvailabilityDTO> getAgentSlots(Long agentId) {
-        if (agentId == null) throw new RuntimeException("Agent ID cannot be null");
-
         User agent = userRepo.findById(agentId)
                 .orElseThrow(() -> new RuntimeException("Agent not found"));
 
-        return availabilityRepo.findByAgentAndIsBookedFalse(agent)
+        return availabilityRepo.findByAgent(agent)
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    public void deleteSlot(Long slotId) {
+        availabilityRepo.deleteById(slotId);
     }
 
     private AgentAvailabilityDTO mapToDTO(AgentAvailability slot) {
         AgentAvailabilityDTO dto = new AgentAvailabilityDTO();
         dto.setId(slot.getId());
         dto.setAgentId(slot.getAgent().getId());
-        dto.setStartTime(slot.getStartTime());
-        dto.setEndTime(slot.getEndTime());
+        dto.setDayOfWeek(slot.getDayOfWeek());
+        dto.setStartTime(slot.getStartTime()); // LocalTime
+        dto.setEndTime(slot.getEndTime());     // LocalTime
         dto.setBooked(slot.isBooked());
+        dto.setOff(slot.isOff());
         return dto;
+    }
+
+    // ===============================
+    // UPCOMING APPOINTMENT SLOT LOGIC
+    // ===============================
+
+    public List<AppointmentSlotDTO> getUpcomingSlots(Long agentId, int daysAhead) {
+        User agent = userRepo.findById(agentId)
+                .orElseThrow(() -> new RuntimeException("Agent not found"));
+
+        List<AgentAvailability> weekly = availabilityRepo.findByAgent(agent);
+
+        List<AppointmentSlotDTO> result = new ArrayList<>();
+        if (weekly == null || weekly.isEmpty()) return result;
+
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(daysAhead);
+
+        for (LocalDate date = today; !date.isAfter(endDate); date = date.plusDays(1)) {
+            DayOfWeek dow = date.getDayOfWeek();
+            int dowValue = dow.getValue();
+
+            for (AgentAvailability avail : weekly) {
+                if (avail.isOff()) continue;
+                if (avail.getDayOfWeek() != dowValue) continue;
+
+                LocalDateTime start = LocalDateTime.of(date, avail.getStartTime());
+                LocalDateTime end = LocalDateTime.of(date, avail.getEndTime());
+
+                if (!start.isBefore(end)) continue;
+
+                boolean conflict = appointmentRepository
+                        .findByAgentAndStartTimeLessThanAndEndTimeGreaterThan(agent, end, start)
+                        .stream().findAny().isPresent();
+
+                if (!conflict) {
+                    AppointmentSlotDTO slot = new AppointmentSlotDTO();
+                    slot.setAvailabilityId(avail.getId());
+                    slot.setStartTime(start);
+                    slot.setEndTime(end);
+                    result.add(slot);
+                }
+            }
+        }
+
+        result.sort((a, b) -> a.getStartTime().compareTo(b.getStartTime()));
+        return result;
+    }
+
+    public List<AppointmentSlotDTO> getUpcomingSlots(Long agentId) {
+        return getUpcomingSlots(agentId, 14);
     }
 }

@@ -1,120 +1,189 @@
 package com.insurai.backend.service;
 
-import com.insurai.backend.dto.AppointmentDTO;
-import com.insurai.backend.entity.*;
-import com.insurai.backend.repository.*;
+import com.insurai.backend.dto.AppointmentRequest;
+import com.insurai.backend.dto.AppointmentResponse;
+import com.insurai.backend.entity.Appointment;
+import com.insurai.backend.entity.AppointmentStatus;
+import com.insurai.backend.entity.AgentAvailability;
+import com.insurai.backend.entity.Employee;
+import com.insurai.backend.entity.User;
+import com.insurai.backend.repository.AppointmentRepository;
+import com.insurai.backend.repository.EmployeeRepository;
+import com.insurai.backend.repository.UserRepository;
+import com.insurai.backend.repository.AgentAvailabilityRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
 
-    private final AppointmentRepository appointmentRepo;
-    private final UserRepository userRepo;
-    private final EmployeeRepository employeeRepo;
-    private final PolicyRepository policyRepo;
-    private final AgentAvailabilityRepository availabilityRepo;
-    private final AgentPolicyMappingRepository mappingRepo;
+    private final AppointmentRepository appointmentRepository;
+    private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
+    private final AgentAvailabilityRepository availabilityRepository;
 
-    public AppointmentService(AppointmentRepository appointmentRepo,
-                              UserRepository userRepo,
-                              EmployeeRepository employeeRepo,
-                              PolicyRepository policyRepo,
-                              AgentAvailabilityRepository availabilityRepo,
-                              AgentPolicyMappingRepository mappingRepo) {
-        this.appointmentRepo = appointmentRepo;
-        this.userRepo = userRepo;
-        this.employeeRepo = employeeRepo;
-        this.policyRepo = policyRepo;
-        this.availabilityRepo = availabilityRepo;
-        this.mappingRepo = mappingRepo;
+    @Autowired
+    private EmailService emailService; // <-- Inject EmailService
+
+    public AppointmentService(AppointmentRepository appointmentRepository,
+                              EmployeeRepository employeeRepository,
+                              UserRepository userRepository,
+                              AgentAvailabilityRepository availabilityRepository) {
+        this.appointmentRepository = appointmentRepository;
+        this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
+        this.availabilityRepository = availabilityRepository;
     }
 
-    public AppointmentDTO bookAppointment(Long employeeId, Long agentId, Long policyId, LocalDateTime startTime) {
-        // Validate inputs
-        if (employeeId == null || agentId == null || policyId == null || startTime == null) {
-            throw new RuntimeException("All input fields are required");
+    public AppointmentResponse scheduleAppointment(AppointmentRequest request) {
+        // Basic presence checks
+        if (request.getEmployeeId() == null || request.getAgentId() == null ||
+            request.getStartTime() == null || request.getEndTime() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "employeeId, agentId, startTime and endTime are required");
         }
 
-        if (startTime.isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Appointment time cannot be in the past");
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
+        User agent = userRepository.findById(request.getAgentId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent not found"));
+
+        // Check time validity
+        if (!request.getStartTime().isBefore(request.getEndTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time must be before end time");
         }
 
-        Employee employee = employeeRepo.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
-        User agent = userRepo.findById(agentId)
-                .orElseThrow(() -> new RuntimeException("Agent not found"));
-        Policy policy = policyRepo.findById(policyId)
-                .orElseThrow(() -> new RuntimeException("Policy not found"));
+        // Check agent weekly availability
+        DayOfWeek dow = request.getStartTime().getDayOfWeek();
+        int dowValue = dow.getValue();
+        LocalTime reqStartLocal = request.getStartTime().toLocalTime();
+        LocalTime reqEndLocal = request.getEndTime().toLocalTime();
 
-        // Check if agent has the policy assigned
-        boolean hasPolicy = mappingRepo.existsByAgentAndPolicy(agent, policy);
-        if (!hasPolicy) {
-            throw new RuntimeException("Agent is not authorized for this policy");
+        List<AgentAvailability> availList = availabilityRepository.findByAgent(agent).stream()
+                .filter(a -> a.getDayOfWeek() == dowValue && !a.isOff())
+                .filter(a -> !a.getStartTime().isAfter(reqStartLocal) && !a.getEndTime().isBefore(reqEndLocal))
+                .collect(Collectors.toList());
+
+        if (availList.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested time is outside agent's availability or agent is off");
         }
 
-        // Check slot availability
-        AgentAvailability slot = availabilityRepo.findByAgentAndIsBookedFalse(agent)
-                .stream()
-                .filter(s -> !startTime.isBefore(s.getStartTime()) && !startTime.isAfter(s.getEndTime()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No available slot at the requested time"));
+        // Check overlapping appointments
+        List<Appointment> overlapping = appointmentRepository.findByAgentAndStartTimeLessThanAndEndTimeGreaterThan(
+                agent, request.getEndTime(), request.getStartTime()
+        );
 
-        // Prevent employee double-booking
-        boolean conflict = appointmentRepo.existsByEmployeeAndAppointmentTime(employee, startTime);
-        if (conflict) {
-            throw new RuntimeException("Employee already has an appointment at this time");
+        if (!overlapping.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Agent already has an appointment in this time slot");
         }
-
-        // Book slot
-        slot.setBooked(true);
-        availabilityRepo.save(slot);
 
         // Create appointment
         Appointment appointment = new Appointment();
         appointment.setEmployee(employee);
         appointment.setAgent(agent);
-        appointment.setPolicy(policy);
-        appointment.setAppointmentTime(startTime);
-        appointment.setStatus("CONFIRMED");
+        appointment.setStartTime(request.getStartTime());
+        appointment.setEndTime(request.getEndTime());
+        appointment.setStatus(AppointmentStatus.SCHEDULED);
+        appointment.setNotes(request.getNotes());
 
-        Appointment saved = appointmentRepo.save(appointment);
-        return mapToDTO(saved);
+        Appointment saved = appointmentRepository.save(appointment);
+
+        // ------------------------------
+        // Send email notification to agent
+        // ------------------------------
+        if (agent.getEmail() != null) {
+            String subject = "New Appointment Booked";
+            String body = "Hello " + agent.getUsername() + ",\n\n" +
+                    "A new appointment has been booked by " + employee.getUser().getUsername() + ".\n" +
+                    "Date & Time: " + request.getStartTime() + " to " + request.getEndTime() + "\n\n" +
+                    "Please check your dashboard for details.\n\nRegards,\nInsurance Team";
+            emailService.sendEmail(agent.getEmail(), subject, body);
+        }
+
+        return toResponse(saved);
     }
 
-    public List<AppointmentDTO> getAppointmentsByAgent(Long agentId) {
-        if (agentId == null) throw new RuntimeException("Agent ID cannot be null");
-
-        User agent = userRepo.findById(agentId)
-                .orElseThrow(() -> new RuntimeException("Agent not found"));
-        return appointmentRepo.findByAgent(agent)
+    public List<AppointmentResponse> getAgentAppointments(Long agentId) {
+        User agent = userRepository.findById(agentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent not found"));
+        return appointmentRepository.findByAgent(agent)
                 .stream()
-                .map(this::mapToDTO)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    public List<AppointmentDTO> getAppointmentsByEmployee(Long employeeId) {
-        if (employeeId == null) throw new RuntimeException("Employee ID cannot be null");
-
-        Employee employee = employeeRepo.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
-        return appointmentRepo.findByEmployee(employee)
+    public List<AppointmentResponse> getEmployeeAppointments(Long employeeId) {
+        return appointmentRepository.findByEmployeeId(employeeId)
                 .stream()
-                .map(this::mapToDTO)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    private AppointmentDTO mapToDTO(Appointment app) {
-        AppointmentDTO dto = new AppointmentDTO();
-        dto.setId(app.getId());
-        dto.setEmployeeId(app.getEmployee().getId());
-        dto.setAgentId(app.getAgent().getId());
-        dto.setPolicyId(app.getPolicy().getId());
-        dto.setAppointmentTime(app.getAppointmentTime());
-        dto.setStatus(app.getStatus());
-        return dto;
+    public AppointmentResponse updateAppointmentStatus(Long appointmentId, AppointmentStatus status) {
+    Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+    appointment.setStatus(status);
+    return toResponse(appointmentRepository.save(appointment));
+}
+
+// -------------------------
+// NEW: Mark appointments as MISSED after grace period
+// -------------------------
+public void markMissedAppointments() {
+    LocalDateTime now = LocalDateTime.now();
+    List<Appointment> toMarkMissed = appointmentRepository.findByStatus(AppointmentStatus.SCHEDULED)
+            .stream()
+            .filter(a -> a.getEndTime().plusMinutes(15).isBefore(now)) // 15 min grace period
+            .collect(Collectors.toList());
+
+    for (Appointment a : toMarkMissed) {
+        a.setStatus(AppointmentStatus.MISSED);
+        appointmentRepository.save(a);
+
+        // Optional: send email to agent
+        if (a.getAgent() != null && a.getAgent().getEmail() != null) {
+            String subject = "Appointment Missed Notification";
+            String body = "Hello " + a.getAgent().getUsername() + ",\n\n" +
+                    "Appointment ID " + a.getId() + " scheduled from " + 
+                    a.getStartTime() + " to " + a.getEndTime() + " was missed.\n\nRegards,\nInsurance Team";
+            emailService.sendEmail(a.getAgent().getEmail(), subject, body);
+        }
+    }
+}
+
+
+    public AppointmentResponse toResponse(Appointment appointment) {
+        AppointmentResponse res = new AppointmentResponse();
+        res.setId(appointment.getId());
+
+        // Employee info
+        if (appointment.getEmployee() != null && appointment.getEmployee().getUser() != null) {
+            res.setEmployeeId(appointment.getEmployee().getId());
+            res.setEmployeeName(appointment.getEmployee().getUser().getUsername());
+        } else {
+            res.setEmployeeName("Unknown");
+        }
+
+        // Agent info
+        if (appointment.getAgent() != null) {
+            res.setAgentId(appointment.getAgent().getId());
+            res.setAgentName(appointment.getAgent().getUsername());
+        } else {
+            res.setAgentName("Unknown");
+        }
+
+        res.setStartTime(appointment.getStartTime());
+        res.setEndTime(appointment.getEndTime());
+        res.setStatus(appointment.getStatus());
+        res.setNotes(appointment.getNotes());
+
+        return res;
     }
 }

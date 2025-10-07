@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
 import axios from "axios";
 import styles from "./Dashboard.module.css";
 import { authHeader } from "../../utils/authHeader";
@@ -91,7 +90,6 @@ const PolicyManagement = () => {
 
   return (
     <div>
-      <Navbar />
       <div className={styles.dashboardContainer}>
         <h1>Policy Management</h1>
 

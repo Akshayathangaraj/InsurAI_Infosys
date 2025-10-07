@@ -14,7 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import java.util.Arrays;
 
 @Configuration
@@ -25,6 +25,12 @@ public class SecurityConfig {
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
     }
+    
+
+@Bean
+public GrantedAuthorityDefaults grantedAuthorityDefaults() {
+    return new GrantedAuthorityDefaults(""); // Remove default "ROLE_" prefix
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,32 +51,28 @@ public class SecurityConfig {
             .and()
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
-
-                // --- ALLOW DOCUMENT VIEWER ENDPOINT ---
+                .requestMatchers("/api/employees/by-username/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/claims/view-document/**").permitAll()
 
-                // Policies
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                // Allow agent availability endpoints
+                .requestMatchers("/api/agent-availability/toggle-off/**").hasAnyRole("AGENT", "ADMIN")
+                .requestMatchers("/api/agent-availability/**").hasAnyRole("AGENT", "ADMIN")
+
                 .requestMatchers(HttpMethod.GET, "/api/policies/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
                 .requestMatchers(HttpMethod.POST, "/api/policies/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/policies/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/policies/**").hasRole("ADMIN")
 
-                // Claims
                 .requestMatchers(HttpMethod.GET, "/api/claims/employee/**").hasAnyRole("EMPLOYEE", "ADMIN", "AGENT")
                 .requestMatchers(HttpMethod.GET, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
                 .requestMatchers(HttpMethod.POST, "/api/claims/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
                 .requestMatchers(HttpMethod.PUT, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
                 .requestMatchers(HttpMethod.DELETE, "/api/claims/**").hasRole("ADMIN")
 
-                // Claim notes
                 .requestMatchers("/api/claim-notes/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-
-                // Appointments
                 .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-                .requestMatchers("/api/employees/by-username/**").permitAll()
-
-                // Employees
                 .requestMatchers("/api/employees/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
 
                 .anyRequest().authenticated()

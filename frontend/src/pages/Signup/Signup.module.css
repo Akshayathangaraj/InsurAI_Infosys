@@ -4,13 +4,20 @@
   padding: 40px;
   background-color: #fdfdfd;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.container:hover {
+  transform: translateY(-5px);
 }
 
 h2 {
   margin-bottom: 20px;
   color: #1976d2;
+  font-weight: 600;
+  font-size: 28px;
 }
 
 .inputGroup {
@@ -20,42 +27,70 @@ h2 {
 input,
 select {
   width: 100%;
-  padding: 12px 10px;
-  border-radius: 6px;
+  padding: 12px 15px;
+  border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 16px;
   box-sizing: border-box;
+  transition: 0.3s;
 }
 
 input:focus,
 select:focus {
   border-color: #1976d2;
   outline: none;
-  box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
+  box-shadow: 0 0 8px rgba(25, 118, 210, 0.4);
 }
 
 .btn {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background-color: #1976d2;
   color: white;
   font-size: 16px;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: 0.3s;
 }
 
 .btn:hover {
-  background-color: #115293;
+  background-color: #48d462;;
+}
+
+.links {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.backBtn {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: transparent;
+  border: 2px solid #1976d2;
+  color: #1976d2;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.backBtn:hover {
+  background-color: #1976d2;
+  color: white;
 }
 
 .error {
   color: red;
   margin-bottom: 15px;
+  font-weight: 500;
 }
 
 .success {
   color: green;
   margin-bottom: 15px;
+  font-weight: 500;
 }

@@ -9,9 +9,13 @@ import UserDashboard from "./pages/Dashboard/UserDashboard";
 import AgentDashboard from "./pages/Dashboard/AgentDashboard";
 import EmployeePolicies from "./pages/Dashboard/EmployeePolicies";
 import EmployeeClaims from "./pages/Dashboard/EmployeeClaims";
-// Auth helper
+import EmployeeBookAppointment from "./pages/Dashboard/EmployeeBookAppointment";
+import AgentAppointments from "./pages/Dashboard/AgentAppointments";
+import AgentFreeTime from "./pages/Dashboard/AgentFreeTime";
 import PolicyManagement from "./pages/Dashboard/PolicyManagement";
-
+import EmployeeAppointments from "./pages/Dashboard/EmployeeAppointments";
+import HomePage from "./pages/Dashboard/HomePage";
+import Layout from "./components/Layout";
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" />;
@@ -28,8 +32,9 @@ const RoleRoute = ({ children, allowedRoles }) => {
 
 function App() {
   return (
+    <Layout>
     <Routes>
-      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
@@ -52,8 +57,10 @@ function App() {
           </RoleRoute>
         }
       />
+      <Route path="/book-appointment" element={<EmployeeBookAppointment />} />
       <Route path="/employee-claims" element={<EmployeeClaims />} />
       <Route path="/admin/policies" element={<PolicyManagement />} />
+      <Route path="/employee-appointments" element={<EmployeeAppointments />} />
       <Route
   path="/employee-policies"
   element={
@@ -71,10 +78,12 @@ function App() {
           </RoleRoute>
         }
       />
-
+      <Route path="/agent-appointments" element={<AgentAppointments />} />
+<Route path="/agent-freetime" element={<AgentFreeTime />} />
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
+    </Layout>
   );
 }
 

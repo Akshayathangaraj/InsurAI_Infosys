@@ -2,7 +2,8 @@ package com.insurai.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "agent_availability")
@@ -19,8 +20,11 @@ public class AgentAvailability {
     @JoinColumn(name = "agent_id", nullable = false)
     private User agent;
 
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private int dayOfWeek; // 1=Monday, 7=Sunday
+
+    private LocalTime startTime;
+    private LocalTime endTime;
 
     private boolean isBooked = false;
+    private boolean isOff = false; // for off-day toggle
 }

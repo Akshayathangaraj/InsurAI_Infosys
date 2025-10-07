@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../components/Navbar";
 import axios from "axios";
 import styles from "./Dashboard.module.css";
 import { authHeader } from "../../utils/authHeader";
-import { FaShieldAlt, FaFileSignature, FaUserTie, FaCalendarAlt } from "react-icons/fa";
+import { FaShieldAlt, FaFileSignature, FaUserTie } from "react-icons/fa";
 
 const API_BASE = "http://localhost:8080/api";
 
@@ -14,7 +13,6 @@ const AdminDashboard = () => {
   const [policiesCount, setPoliciesCount] = useState(0);
   const [activePage, setActivePage] = useState("home");
 
-  // Modal for settle
   const [settleModal, setSettleModal] = useState({ show: false, claimId: null });
   const [settleAmount, setSettleAmount] = useState("");
   const [settleNotes, setSettleNotes] = useState("");
@@ -57,7 +55,6 @@ const AdminDashboard = () => {
     fetchPoliciesCount();
   }, []);
 
-  // Status change
   const handleStatusChange = async (claimId, status) => {
     try {
       await axios.put(`${API_BASE}/claims/${claimId}/status?status=${status}`, {}, { headers: authHeader() });
@@ -67,7 +64,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Assign agent
   const handleAssignAgent = async (claimId, agentId) => {
     if (!agentId) return;
     try {
@@ -78,7 +74,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Settle modal
   const openSettleModal = (claimId) => {
     setSettleModal({ show: true, claimId });
     setSettleAmount("");
@@ -102,190 +97,184 @@ const AdminDashboard = () => {
     }
   };
 
-  // Card navigation
   const handleCardClick = (page) => setActivePage(page);
 
   return (
-    <div>
-      <Navbar />
-      <div className={styles.dashboardWrapper}>
-        {/* Home dashboard card-based view */}
-        {activePage === "home" && (
-          <div className={styles.dashboardContainer}>
-            <h1 className={styles.dashboardTitle}>Welcome, Admin</h1>
-            <p className={styles.subtitle}>
-              Manage policies, oversee claims, assign agents, and schedule appointments.
-            </p>
-            <div className={styles.cardsContainer}>
-              {/* Policies card */}
-              <div className={`${styles.card} ${styles.cardBlue}`} onClick={() => handleCardClick("policies")}>
-                <div className={styles.iconWrapper}>
-                  <FaShieldAlt className={styles.icon} />
-                </div>
-                <h2>Total Policies</h2>
-                <p className={styles.count}>{policiesCount}</p>
-                <button className={styles.btn}>Manage Policies</button>
+    <div className={styles.dashboardWrapper}>
+      {/* Home Dashboard */}
+      {activePage === "home" && (
+        <div className={styles.dashboardContainer}>
+          <h1 className={styles.dashboardTitle}>Welcome, Admin</h1>
+          <p className={styles.subtitle}>
+            Manage policies, oversee claims, and manage agents.
+          </p>
+          <div className={styles.cardsContainer}>
+            <div className={`${styles.card} ${styles.cardBlue}`} onClick={() => handleCardClick("policies")}>
+              <div className={styles.iconWrapper}>
+                <FaShieldAlt className={styles.icon} />
               </div>
-              {/* Claims card */}
-              <div className={`${styles.card} ${styles.cardGreen}`} onClick={() => handleCardClick("claims")}>
-                <div className={styles.iconWrapper}>
-                  <FaFileSignature className={styles.icon} />
-                </div>
-                <h2>Claims Management</h2>
-                <p className={styles.count}>{claims.length}</p>
-                <button className={styles.btn}>View Claims</button>
+              <h2>Total Policies</h2>
+              <p className={styles.count}>{policiesCount}</p>
+              <button className={styles.btn}>Manage Policies</button>
+            </div>
+
+            <div className={`${styles.card} ${styles.cardGreen}`} onClick={() => handleCardClick("claims")}>
+              <div className={styles.iconWrapper}>
+                <FaFileSignature className={styles.icon} />
               </div>
-              {/* Agents card */}
-              <div className={`${styles.card} ${styles.cardPurple}`} onClick={() => handleCardClick("agents")}>
-                <div className={styles.iconWrapper}>
-                  <FaUserTie className={styles.icon} />
-                </div>
-                <h2>Agents</h2>
-                <p className={styles.count}>{agents.length}</p>
-                <button className={styles.btn}>Manage Agents</button>
+              <h2>Claims Management</h2>
+              <p className={styles.count}>{claims.length}</p>
+              <button className={styles.btn}>View Claims</button>
+            </div>
+
+            <div className={`${styles.card} ${styles.cardPurple}`} onClick={() => handleCardClick("agents")}>
+              <div className={styles.iconWrapper}>
+                <FaUserTie className={styles.icon} />
               </div>
-              {/* Appointments card */}
-              <div className={`${styles.card} ${styles.cardTeal}`} onClick={() => handleCardClick("appointments")}>
-                <div className={styles.iconWrapper}>
-                  <FaCalendarAlt className={styles.icon} />
-                </div>
-                <h2>Appointments</h2>
-                <p className={styles.count}>0</p>
-                <button className={styles.btn} disabled>
-                  Coming Soon
+              <h2>Agents</h2>
+              <p className={styles.count}>{agents.length}</p>
+              <button className={styles.btn}>Manage Agents</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Claims Management */}
+      {activePage === "claims" && (
+        <div className={styles.dashboardContainer}>
+          <h1>Claims Management</h1>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Employee</th>
+                <th>Policy</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Assigned Agent</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {claims.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: "center" }}>No claims available</td>
+                </tr>
+              ) : (
+                claims.map((c) => (
+                  <tr key={c.id}>
+                    <td>{c.id}</td>
+                    <td>{c.employee?.user?.username || c.employeeName || "N/A"}</td>
+                    <td>{c.policy?.policyName || c.policyName || `Policy #${c.policyId}`}</td>
+                    <td>{c.description}</td>
+                    <td>{c.status}</td>
+                    <td>
+                      {c.assignedAgent ? (
+                        c.assignedAgent.username
+                      ) : agents.length > 0 ? (
+                        <select defaultValue="" onChange={(e) => handleAssignAgent(c.id, e.target.value)}>
+                          <option value="" disabled>Assign Agent</option>
+                          {agents.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.username || a.fullName || `Agent #${a.id}`}
+                            </option>
+                          ))}
+                        </select>
+                      ) : "No agents available"}
+                    </td>
+                    <td>
+                      {c.status === "PENDING" && (
+                        <>
+                          <button className={styles.btn} onClick={() => handleStatusChange(c.id, "APPROVED")}>Approve</button>
+                          <button className={styles.btnDanger} onClick={() => handleStatusChange(c.id, "REJECTED")}>Reject</button>
+                        </>
+                      )}
+                      {c.status === "APPROVED" && (
+                        <button className={styles.btn} onClick={() => openSettleModal(c.id)}>Settle</button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {settleModal.show && (
+            <div className={styles.modal}>
+              <h3>Settle Claim #{settleModal.claimId}</h3>
+              <input
+                type="number"
+                placeholder="Settlement Amount"
+                value={settleAmount}
+                onChange={(e) => setSettleAmount(e.target.value)}
+              />
+              <textarea
+                placeholder="Resolution Notes"
+                value={settleNotes}
+                onChange={(e) => setSettleNotes(e.target.value)}
+              />
+              <div className={styles.modalButtons}>
+                <button className={styles.btn} onClick={handleSettleClaim}>Settle</button>
+                <button className={styles.btnDanger} onClick={() => setSettleModal({ show: false, claimId: null })}>
+                  Cancel
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Claims management module */}
-        {activePage === "claims" && (
-          <div className={styles.dashboardContainer}>
-            <h1>Claims Management</h1>
-            <table className={styles.table}>
-              <thead>
+          <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>
+            ← Back to Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Policies */}
+      {activePage === "policies" && (
+        <div className={styles.dashboardContainer}>
+          <h1>Policies Overview</h1>
+          <p>Total Policies: {policiesCount}</p>
+          <button className={styles.btn} onClick={() => navigate("/admin/policies")}>Go to Policies Management</button>
+          <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>
+            ← Back to Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Agents */}
+      {activePage === "agents" && (
+        <div className={styles.dashboardContainer}>
+          <h1>Agents Overview</h1>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agents.length === 0 ? (
                 <tr>
-                  <th>ID</th>
-                  <th>Employee</th>
-                  <th>Policy</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                  <th>Assigned Agent</th>
-                  <th>Actions</th>
+                  <td colSpan="4" style={{ textAlign: "center" }}>No agents found</td>
                 </tr>
-              </thead>
-              <tbody>
-                {claims.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: "center" }}>No claims available</td>
+              ) : (
+                agents.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.id}</td>
+                    <td>{a.username || a.fullName}</td>
+                    <td>{a.email}</td>
+                    <td>{a.role}</td>
                   </tr>
-                ) : (
-                  claims.map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.id}</td>
-                      <td>{c.employee?.user?.username || c.employeeName || "N/A"}</td>
-                      <td>{c.policy?.policyName || c.policyName || `Policy #${c.policyId}`}</td>
-                      <td>{c.description}</td>
-                      <td>{c.status}</td>
-                      <td>
-                        {c.assignedAgent ? (
-                          c.assignedAgent.username
-                        ) : agents.length > 0 ? (
-                          <select defaultValue="" onChange={(e) => handleAssignAgent(c.id, e.target.value)}>
-                            <option value="" disabled>Assign Agent</option>
-                            {agents.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.username || a.fullName || `Agent #${a.id}`}
-                              </option>
-                            ))}
-                          </select>
-                        ) : "No agents available"}
-                      </td>
-                      <td>
-                        {c.status === "PENDING" && (
-                          <>
-                            <button className={styles.btn} onClick={() => handleStatusChange(c.id, "APPROVED")}>
-                              Approve
-                            </button>
-                            <button className={styles.btnDanger} onClick={() => handleStatusChange(c.id, "REJECTED")}>
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {c.status === "APPROVED" && (
-                          <button className={styles.btn} onClick={() => openSettleModal(c.id)}>
-                            Settle
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-            {/* Modal for settling */}
-            {settleModal.show && (
-              <div className={styles.modal}>
-                <h3>Settle Claim #{settleModal.claimId}</h3>
-                <input
-                  type="number"
-                  placeholder="Settlement Amount"
-                  value={settleAmount}
-                  onChange={(e) => setSettleAmount(e.target.value)}
-                />
-                <textarea
-                  placeholder="Resolution Notes"
-                  value={settleNotes}
-                  onChange={(e) => setSettleNotes(e.target.value)}
-                />
-                <div className={styles.modalButtons}>
-                  <button className={styles.btn} onClick={handleSettleClaim}>Settle</button>
-                  <button className={styles.btnDanger} onClick={() => setSettleModal({ show: false, claimId: null })}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-            <button
-              className={`${styles.btn} ${styles.btnSecondary}`}
-              style={{ marginTop: 32 }}
-              onClick={() => setActivePage("home")}
-            >
-              ← Back to Dashboard
-            </button>
-          </div>
-        )}
-
-        {/* Policies module placeholder */}
-        {activePage === "policies" && (
-          <div className={styles.dashboardContainer}>
-            <h1>Policies Overview</h1>
-            <p>Total Policies: {policiesCount}</p>
-            <button className={styles.btn} onClick={() => navigate("/admin/policies")}>Go to Policies Management</button>
-            <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>← Back to Dashboard</button>
-          </div>
-        )}
-
-        {/* Agents module placeholder */}
-        {activePage === "agents" && (
-          <div className={styles.dashboardContainer}>
-            <h1>Agents Overview</h1>
-            <p>Total Agents: {agents.length}</p>
-            <button className={styles.btn} onClick={() => navigate("/admin/agents")}>Go to Agent Management</button>
-            <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>← Back to Dashboard</button>
-          </div>
-        )}
-
-        {/* Appointments module placeholder */}
-        {activePage === "appointments" && (
-          <div className={styles.dashboardContainer}>
-            <h1>Appointments Overview</h1>
-            <p>Module coming soon!</p>
-            <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>← Back to Dashboard</button>
-          </div>
-        )}
-      </div>
+                ))
+              )}
+            </tbody>
+          </table>
+          <button className={`${styles.btn} ${styles.btnSecondary}`} style={{ marginTop: 32 }} onClick={() => setActivePage("home")}>
+            ← Back to Dashboard
+          </button>
+        </div>
+      )}
     </div>
   );
 };

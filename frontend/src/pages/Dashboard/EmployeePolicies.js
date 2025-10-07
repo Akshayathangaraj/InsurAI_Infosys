@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Navbar from "../../components/Navbar";
 import axios from "axios";
 import styles from "./Dashboard.module.css";
 import { authHeader } from "../../utils/authHeader";
@@ -38,7 +37,6 @@ const EmployeePolicies = () => {
 
   return (
     <div className={styles.dashboardWrapper}>
-      <Navbar />
       <div className={styles.dashboardContainer}>
         <h1 className={styles.dashboardTitle}>My Insurance Policies</h1>
         <p className={styles.subtitle}>View details of policies assigned to you</p>

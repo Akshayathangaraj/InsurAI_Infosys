@@ -7,7 +7,7 @@ const Signup = () => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("EMPLOYEE"); // default to EMPLOYEE
+  const [role, setRole] = useState("EMPLOYEE");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
@@ -20,15 +20,9 @@ const Signup = () => {
     try {
       await signup(username, email, password, role);
       setSuccess("Account created successfully! Redirecting to login...");
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      if (err.response && err.response.data) {
-        setError(err.response.data);
-      } else {
-        setError("Something went wrong. Try again.");
-      }
+      setError(err.response?.data || "Something went wrong. Try again.");
     }
   };
 
@@ -76,9 +70,12 @@ const Signup = () => {
           Signup
         </button>
       </form>
-      <p>
-        Already have an account? <Link to="/login">Login here</Link>
-      </p>
+      <div className={styles.links}>
+        <p>Already have an account? <Link to="/login">Login here</Link></p>
+        <button className={styles.backBtn} onClick={() => navigate("/")}>
+          ← Back to Home
+        </button>
+      </div>
     </div>
   );
 };

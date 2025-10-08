@@ -5,7 +5,7 @@ import styles from "./Dashboard.module.css";
 
 const API_BASE = "http://localhost:8080/api";
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const dayMap = { "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
+const dayMap = { "Sunday": 7, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
 
 const AgentFreeTime = () => {
   const [slots, setSlots] = useState([]);

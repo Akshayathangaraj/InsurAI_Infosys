@@ -4,6 +4,7 @@ import styles from "./Dashboard.module.css";
 import { authHeader } from "../../utils/authHeader";
 import { useNavigate } from "react-router-dom";
 import { FaShieldAlt, FaFileSignature, FaCalendarAlt } from "react-icons/fa";
+import Chatbot from "../../components/Chatbot"; // import Chatbot component
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -20,7 +21,9 @@ const UserDashboard = () => {
     try {
       let employeeId = storedEmployeeId;
       if (!employeeId) {
-        const empRes = await axios.get(`${API_BASE}/employees/by-username/${username}`, { headers: authHeader() });
+        const empRes = await axios.get(`${API_BASE}/employees/by-username/${username}`, {
+          headers: authHeader(),
+        });
         employeeId = empRes.data.id;
         localStorage.setItem("employeeId", employeeId);
       }
@@ -88,6 +91,9 @@ const UserDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Chatbot Floating Component */}
+      <Chatbot />
     </div>
   );
 };

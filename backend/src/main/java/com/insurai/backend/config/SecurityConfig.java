@@ -50,33 +50,43 @@ public GrantedAuthorityDefaults grantedAuthorityDefaults() {
             .cors()
             .and()
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/employees/by-username/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/claims/view-document/**").permitAll()
+    // Public endpoints
+    .requestMatchers("/api/auth/**").permitAll()
+    .requestMatchers("/api/employees/by-username/**").permitAll()
+    .requestMatchers(HttpMethod.GET, "/api/claims/view-document/**").permitAll()
 
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
+    // Allow chatbot endpoint without login
+    .requestMatchers("/api/chatbot/**").permitAll()
 
-                // Allow agent availability endpoints
-                .requestMatchers("/api/agent-availability/toggle-off/**").hasAnyRole("AGENT", "ADMIN")
-                .requestMatchers("/api/agent-availability/**").hasAnyRole("AGENT", "ADMIN")
+    // Admin-only endpoints
+    .requestMatchers("/api/users/**").hasRole("ADMIN")
 
-                .requestMatchers(HttpMethod.GET, "/api/policies/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-                .requestMatchers(HttpMethod.POST, "/api/policies/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/policies/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/policies/**").hasRole("ADMIN")
+    // Agent availability
+    .requestMatchers("/api/agent-availability/toggle-off/**").hasAnyRole("AGENT", "ADMIN")
+    .requestMatchers("/api/agent-availability/**").hasAnyRole("AGENT", "ADMIN")
 
-                .requestMatchers(HttpMethod.GET, "/api/claims/employee/**").hasAnyRole("EMPLOYEE", "ADMIN", "AGENT")
-                .requestMatchers(HttpMethod.GET, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
-                .requestMatchers(HttpMethod.POST, "/api/claims/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-                .requestMatchers(HttpMethod.PUT, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
-                .requestMatchers(HttpMethod.DELETE, "/api/claims/**").hasRole("ADMIN")
+    // Policies
+    .requestMatchers(HttpMethod.GET, "/api/policies/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+    .requestMatchers(HttpMethod.POST, "/api/policies/**").hasRole("ADMIN")
+    .requestMatchers(HttpMethod.PUT, "/api/policies/**").hasRole("ADMIN")
+    .requestMatchers(HttpMethod.DELETE, "/api/policies/**").hasRole("ADMIN")
 
-                .requestMatchers("/api/claim-notes/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-                .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
-                .requestMatchers("/api/employees/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+    // Claims
+    .requestMatchers(HttpMethod.GET, "/api/claims/employee/**").hasAnyRole("EMPLOYEE", "ADMIN", "AGENT")
+    .requestMatchers(HttpMethod.GET, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
+    .requestMatchers(HttpMethod.POST, "/api/claims/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+    .requestMatchers(HttpMethod.PUT, "/api/claims/**").hasAnyRole("ADMIN", "AGENT")
+    .requestMatchers(HttpMethod.DELETE, "/api/claims/**").hasRole("ADMIN")
 
-                .anyRequest().authenticated()
-            )
+    // Other endpoints
+    .requestMatchers("/api/claim-notes/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+    .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+    .requestMatchers("/api/employees/**").hasAnyRole("ADMIN", "AGENT", "EMPLOYEE")
+
+    // All other endpoints require authentication
+    .anyRequest().authenticated()
+)
+
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .formLogin(form -> form.disable())
             .httpBasic(httpBasic -> httpBasic.disable());

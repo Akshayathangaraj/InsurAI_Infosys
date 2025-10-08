@@ -1,0 +1,25 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - hi
+    - hello
+    - hey
+    - good morning
+    - good evening
+
+- intent: fetch_data
+  examples: |
+    - what is the email of user [6](identifier)
+    - show me the [policy_name](column) of policy [3](identifier)
+    - what is the [status](column) of claim [10](identifier)
+    - get the [department](column) of employee [4](identifier)
+    - tell me the [appointment_time](column) for appointment [5](identifier)
+    - give me the [full_name](column) of employee [2](identifier)
+    - email of user [6](identifier)
+    - [email](column) of user [6](identifier)
+    - [policy_name](column) of policy [3](identifier)
+    - status of claim [10](identifier)
+    - department of employee [4](identifier)
+    - appointment_time of appointment [5](identifier)

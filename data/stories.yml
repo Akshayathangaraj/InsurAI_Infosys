@@ -1,0 +1,44 @@
+version: "3.1"
+
+stories:
+
+- story: fetch user email
+  steps:
+  - intent: ask_email
+  - action: action_fetch_email
+  
+- story: happy path
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: mood_great
+  - action: utter_happy
+
+- story: sad path 1
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: mood_unhappy
+  - action: utter_cheer_up
+  - action: utter_did_that_help
+  - intent: affirm
+  - action: utter_happy
+
+- story: sad path 2
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - intent: mood_unhappy
+  - action: utter_cheer_up
+  - action: utter_did_that_help
+  - intent: deny
+  - action: utter_goodbye
+- story: fetch data story
+  steps:
+  - intent: fetch_data
+  - action: action_fetch_table_data
+
+- story: greet story
+  steps:
+  - intent: greet
+  - action: utter_greet

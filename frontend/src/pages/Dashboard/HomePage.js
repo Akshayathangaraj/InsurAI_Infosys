@@ -2,13 +2,13 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import { FaShieldAlt, FaFileSignature, FaCalendarAlt, FaUsers } from "react-icons/fa";
+import Chatbot from "../../components/Chatbot"; // Import Chatbot component
 
 const HomePage = () => {
   const navigate = useNavigate();
 
   return (
     <div className="home-wrapper">
-    
 
       <header className="hero-section">
         <div className="hero-content">
@@ -53,6 +53,9 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Chatbot Floating Component */}
+      <Chatbot />
 
     </div>
   );

@@ -1,113 +1,136 @@
 package com.insurai.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.insurai.backend.dto.AgentAvailabilityDTO;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import com.google.auth.oauth2.GoogleCredentials;
-
-import java.io.InputStream;
-import java.util.*;
-import java.util.stream.Collectors;
-
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 @Service
 public class GeminiChatbotService {
 
-    @Value("${gemini.service-account-json}")
-    private String serviceAccountJsonPath;
-
-    private final RestTemplate restTemplate;
     private final AgentAvailabilityService agentService;
+    private final OkHttpClient client;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    public GeminiChatbotService(AgentAvailabilityService agentService, RestTemplate restTemplate) {
+    // Hardcoded Gemini API key
+    private final String apiKey = "AIzaSyBxH3fHAO95EX-YIwCrivQypXySjJaRJmQ";
+
+    @Value("${gemini.api.url}")
+    private String apiUrl;
+
+    public GeminiChatbotService(AgentAvailabilityService agentService) {
         this.agentService = agentService;
-        this.restTemplate = restTemplate;
+        this.client = new OkHttpClient();
+        this.objectMapper = new ObjectMapper();
     }
 
-    public String getResponse(String userMessage) {
-        try {
-            // 1️⃣ Prepare agent info for prompt
-            List<AgentAvailabilityDTO> agents = agentService.getAllAgents();
-            String agentInfo = agents.stream()
-                    .filter(a -> a != null && a.getName() != null && a.getDate() != null)
-                    .map(a -> "Agent " + a.getName() + " is available on " + a.getDate())
-                    .collect(Collectors.joining("\n"));
+    // ✅ Rename method to match controller
+    public String getResponse(String userMessage) throws IOException {
 
-            String fullPrompt = "You are InsurAI, an intelligent assistant.\n\n"
-                    + (agentInfo.isEmpty() ? "No agent availability found.\n" : agentInfo + "\n\n")
-                    + "User: " + (userMessage != null ? userMessage : "");
+        // Build context from database
+        String context = buildContextFromDatabase();
 
-            // 2️⃣ Build request body
-            Map<String, Object> requestBody = Map.of(
-                    "model", "gemini-1.5-flash",
-                    "contents", List.of(
-                            Map.of("parts", List.of(
-                                    Map.of("text", fullPrompt)
-                            ))
-                    ),
-                    "generationConfig", Map.of(
-                            "temperature", 0.7,
-                            "maxOutputTokens", 500
-                    )
-            );
+        // Build full prompt
+        String fullPrompt = buildPromptWithContext(context, userMessage);
 
-            // 3️⃣ Get access token from service account
-            String accessToken = getAccessToken();
+        // Build request body for Gemini API
+        ObjectNode requestBody = objectMapper.createObjectNode();
 
-            // 4️⃣ Setup headers with Bearer token
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(accessToken);
+        ArrayNode contents = objectMapper.createArrayNode();
+        ObjectNode content = objectMapper.createObjectNode();
 
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        content.put("role", "user"); // required by Gemini API
 
-            String url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+        ArrayNode parts = objectMapper.createArrayNode();
+        ObjectNode part = objectMapper.createObjectNode();
+        part.put("text", fullPrompt);
+        parts.add(part);
 
+        content.set("parts", parts);
+        contents.add(content);
+        requestBody.set("contents", contents);
 
-            // 5️⃣ Make API call
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+        RequestBody body = RequestBody.create(
+                requestBody.toString(),
+                MediaType.parse("application/json")
+        );
 
-            // 6️⃣ Parse response
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.getBody().get("candidates");
-                if (candidates != null && !candidates.isEmpty()) {
-                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-                    if (content != null) {
-                        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                        if (parts != null && !parts.isEmpty()) {
-                            Object text = parts.get(0).get("text");
-                            if (text != null) return text.toString();
-                        }
-                    }
+        Request request = new Request.Builder()
+                .url(apiUrl) // API URL from application.properties
+                .addHeader("Content-Type", "application/json")
+                .addHeader("X-Goog-Api-Key", apiKey)
+                .post(body)
+                .build();
+
+        // Execute request
+        try (Response response = client.newCall(request).execute()) {
+
+            if (!response.isSuccessful()) {
+                String errorBody = "";
+                try (ResponseBody responseBody = response.body()) {
+                    if (responseBody != null) errorBody = responseBody.string();
                 }
-            } else {
-                System.err.println("Gemini API failed with status: " + response.getStatusCode());
-                System.err.println("Response body: " + response.getBody());
+                System.err.println("--- Gemini API Error Response ---");
+                System.err.println("HTTP Status: " + response.code());
+                System.err.println("Error Body: " + errorBody);
+                System.err.println("---------------------------------");
+                throw new IOException("Unexpected response code: " + response.code() + " - " + errorBody);
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("Error while calling Gemini API: " + e.getMessage());
-        }
+            String responseBody = response.body().string();
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
 
-        return "Sorry, I couldn't process your request at the moment.";
+            // Extract text from Gemini response
+            return jsonResponse
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+        }
     }
 
-    private String getAccessToken() throws Exception {
-        try (InputStream serviceAccountStream =
-                     new ClassPathResource(serviceAccountJsonPath.replace("classpath:", "")).getInputStream()) {
+    private String buildContextFromDatabase() {
+        List<AgentAvailabilityDTO> agents = agentService.getAllAgents();
+        StringBuilder context = new StringBuilder();
+        context.append("\n\nAvailable Agents in Our Database:\n");
+        context.append("=================================\n");
 
-            GoogleCredentials credentials = GoogleCredentials
-                    .fromStream(serviceAccountStream)
-                    .createScoped(List.of("https://www.googleapis.com/auth/generative-language"));
-
-            credentials.refreshIfExpired();
-            return credentials.getAccessToken().getTokenValue();
+        for (AgentAvailabilityDTO agent : agents) {
+            context.append(String.format(
+                    "\nAgent Name: %s\n" +
+                    "Available Date: %s\n" +
+                    "---\n",
+                    agent.getName(),
+                    agent.getDate()
+            ));
         }
+        return context.toString();
+    }
+
+    private String buildPromptWithContext(String context, String userMessage) {
+        return "You are InsurAI, an intelligent assistant for agent availability.\n\n" +
+                "Guidelines:\n" +
+                "1. Be professional and helpful.\n" +
+                "2. Provide answers ONLY based on the agent availability listed below.\n" +
+                "3. Keep responses concise.\n\n" +
+                context + "\n\n" +
+                "USER QUESTION: " + userMessage + "\n\n" +
+                "Please provide a helpful, accurate response based on the information above:";
+    }
+
+    public String getCurrentTimestamp() {
+        return LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 }

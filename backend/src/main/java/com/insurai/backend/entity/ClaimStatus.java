@@ -1,9 +1,10 @@
 package com.insurai.backend.entity;
 
 public enum ClaimStatus {
-    PENDING,        // submitted by employee
-    UNDER_REVIEW,   // assigned to an agent or being reviewed
+    PENDING,       
+    UNDER_REVIEW,
+    AGENT_REVIEWED,   
     APPROVED,
     REJECTED,
-    SETTLED         // payment completed
+    SETTLED        
 }

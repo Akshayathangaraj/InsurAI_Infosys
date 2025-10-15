@@ -65,37 +65,37 @@ public class ClaimService {
 
     // ---------------- Update Claim Status ----------------
     public ClaimResponse updateClaimStatus(Long claimId, String statusStr, Long adminId) {
-        Claim claim = claimRepository.findById(claimId)
-                .orElseThrow(() -> new ClaimValidationException("Claim not found"));
+    Claim claim = claimRepository.findById(claimId)
+            .orElseThrow(() -> new ClaimValidationException("Claim not found"));
 
-        ClaimStatus newStatus = ClaimStatus.valueOf(statusStr.toUpperCase());
+    ClaimStatus newStatus = ClaimStatus.valueOf(statusStr.toUpperCase());
 
-        User admin = userRepository.findById(adminId)
-                .orElseThrow(() -> new ClaimValidationException("Admin user not found"));
+    // FIRST get the admin user
+    User admin = userRepository.findById(adminId)
+            .orElseThrow(() -> new ClaimValidationException("Admin user not found"));
 
-        if (admin.getRole() != Role.ADMIN)
-            throw new ClaimValidationException("Only Admin can change claim status");
+    // THEN check the role
+    if (admin.getRole() != Role.ADMIN)
+        throw new ClaimValidationException("Only Admin can change claim status");
 
-        if (newStatus == ClaimStatus.APPROVED || newStatus == ClaimStatus.SETTLED) {
-            double totalSettled = claimRepository.findByPolicy(claim.getPolicy()).stream()
-                    .filter(c -> c.getStatus() == ClaimStatus.SETTLED || c.getStatus() == ClaimStatus.APPROVED)
-                    .mapToDouble(Claim::getAmount).sum();
-
-            if (totalSettled + claim.getAmount() > claim.getPolicy().getClaimLimit()) {
-                throw new ClaimValidationException("Claim exceeds policy's remaining claim limit");
-            }
-        }
-
-        claim.setStatus(newStatus);
-        if (newStatus == ClaimStatus.APPROVED || newStatus == ClaimStatus.REJECTED || newStatus == ClaimStatus.SETTLED) {
-            claim.setDecisionDate(LocalDateTime.now());
-            claim.setProcessedBy(admin);
-        }
-
-        Claim updated = claimRepository.save(claim);
-        noteService.addNote(updated.getId(), adminId, "Status changed to: " + newStatus.name());
-        return mapToResponse(updated);
+    // Admin can only approve/reject if status is AGENT_REVIEWED
+    if (newStatus == ClaimStatus.APPROVED || newStatus == ClaimStatus.REJECTED || newStatus == ClaimStatus.SETTLED) {
+        if (claim.getStatus() != ClaimStatus.AGENT_REVIEWED && claim.getStatus() != ClaimStatus.PENDING)
+            throw new ClaimValidationException("Claim must be AGENT_REVIEWED before Admin approval");
     }
+
+    // Rest of your code...
+    claim.setStatus(newStatus);
+    if (newStatus == ClaimStatus.APPROVED || newStatus == ClaimStatus.REJECTED || newStatus == ClaimStatus.SETTLED) {
+        claim.setDecisionDate(LocalDateTime.now());
+        claim.setProcessedBy(admin);
+    }
+
+    Claim updated = claimRepository.save(claim);
+    noteService.addNote(updated.getId(), adminId, "Status changed to: " + newStatus.name());
+    return mapToResponse(updated);
+}
+
 
     // ---------------- Settle Claim ----------------
     public ClaimResponse settleClaim(Long claimId, Double settlementAmount, Long adminId, String resolutionNotes) {
@@ -131,24 +131,30 @@ public class ClaimService {
 
     // ---------------- Agent Suggestion ----------------
     public ClaimResponse submitAgentSuggestion(Long claimId, Long agentId, String suggestion, String notes) {
-        Claim claim = claimRepository.findById(claimId)
-                .orElseThrow(() -> new ClaimValidationException("Claim not found"));
-        User agent = userRepository.findById(agentId)
-                .orElseThrow(() -> new ClaimValidationException("Agent not found"));
+    Claim claim = claimRepository.findById(claimId)
+            .orElseThrow(() -> new ClaimValidationException("Claim not found"));
+    User agent = userRepository.findById(agentId)
+            .orElseThrow(() -> new ClaimValidationException("Agent not found"));
 
-        if (!agent.equals(claim.getAssignedAgent())) {
-            throw new ClaimValidationException("This claim is not assigned to this agent");
-        }
-
-        if (claim.getStatus() != ClaimStatus.PENDING && claim.getStatus() != ClaimStatus.UNDER_REVIEW)
-            throw new ClaimValidationException("Agent cannot modify claim in current status");
-
-        String noteText = "Agent suggestion: " + suggestion;
-        if (notes != null && !notes.isEmpty()) noteText += " | Notes: " + notes;
-
-        noteService.addNote(claimId, agentId, noteText);
-        return mapToResponse(claim);
+    if (!agent.equals(claim.getAssignedAgent())) {
+        throw new ClaimValidationException("This claim is not assigned to this agent");
     }
+
+    if (claim.getStatus() != ClaimStatus.UNDER_REVIEW)
+        throw new ClaimValidationException("Agent can only suggest for claims UNDER_REVIEW");
+
+    String noteText = "Agent suggestion: " + suggestion;
+    if (notes != null && !notes.isEmpty()) noteText += " | Notes: " + notes;
+
+    // Add progress note
+    noteService.addNote(claimId, agentId, noteText);
+
+    // Update claim status to AGENT_REVIEWED
+    claim.setStatus(ClaimStatus.AGENT_REVIEWED);
+    claimRepository.save(claim);
+
+    return mapToResponse(claim);
+}
 
     // ---------------- Fetch Claims ----------------
     public List<ClaimResponse> getAllClaims() {
